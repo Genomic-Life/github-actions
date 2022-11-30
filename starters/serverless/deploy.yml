@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment Environment'
+        description: 'Environment to Deploy to. You must provide a value for other environment below if selecting it.'
         required: true
         type: choice
         default: dev
@@ -13,6 +13,11 @@ on:
           - test
           - stage
           - prod
+          - OTHER
+      other:
+        required: false
+        type: string
+  
       region:
         description: 'AWS Region'
         required: true
