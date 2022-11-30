@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - test
+          - stage
+          - prod
+      region:
+        description: 'AWS Region'
+        required: true
+        type: choice
+        default: us-west-2
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+      release_tag:
+        description: "What release tag if any should be used for this deployment? (default is HEAD of current branch)"
+        required: false
+        type: choice
+        default: HEAD
+        options:
+          - HEAD
+          
+run-name: Deploy to ${{ inputs.environment }} by @${{ github.actor }}
+
+jobs:
+  deploy:
+    uses: Genomic-Life/github-actions/.github/workflows/serverless_deploy.yml@main
+    with:
+      environment: ${{inputs.environment}}
+      region: ${{inputs.region}}
+      release_tag: ${{inputs.release_tag}}
+      artifact_name: serverless.zip
+      python_version: 3.8
