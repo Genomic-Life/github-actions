@@ -1,0 +1,47 @@
+name: Create Release Candidate
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "What tag should be associated with the latest tag?"
+        required: true
+        type: string
+
+concurrency: 
+  group: tag-management
+  cancel-in-progress: false
+
+jobs:
+  update-latest-rc-tag:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Checkout Github Actions repo
+        uses: actions/checkout@v3
+        with:
+          repository: Genomic-Life/github-actions
+          path: github-actions
+      - name: Get Release Info
+        id: get-release
+        continue-on-error: false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const helper = require('./github-actions/scripts/helper.js');
+            const releaseTagName = process.env.releaseTagName
+            release = await helper.getTagByName(github, context, releaseTagName)
+            const ouput = release
+            return ouput
+        env:
+          releaseTagName: ${{ inputs.release_tag }}
+      - name: Update latest Tag
+        id: update-latest-tag
+        run: |
+          git config --global user.email "GH-CICD-BOT"
+          git config --global user.name "GH-CICD-BOT"
+          git tag -a -f "latest" $release_tag -m "Automated latest-rc tag."
+          git push --force origin "latest"
+        env:
+          release_tag: ${{ steps.get-release.outputs.result.commit.sha }}

@@ -2,15 +2,29 @@ name: Create Release Candidate
 
 on:
   workflow_call:
-
+    # inputs:
+      # artifact_name:
+      #   description: "What is the name of the build artifact to associate with this release?"
+      #   required: true
+      #   type: string
 
 concurrency: 
   group: release-management
   cancel-in-progress: false
 
+# env:
+#   GITHUB_TOKEN: ${{ secrets.GH_CICD_BOT_TOKEN }}
+#   FILENAME: lambda.zip
+#   BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+#   MAJOR_RELEASE: ${{ inputs.major_release || false }}
+#   SYSTEM_NAME: utility
+#   SERVICE: outbox-service
+#   PYTHON_VERSION: 3.9
+
 jobs:
   create-rc:
     name: Create Release Candidate
+    # id: create-rc
     runs-on: ubuntu-20.04
     permissions: write-all
     outputs:

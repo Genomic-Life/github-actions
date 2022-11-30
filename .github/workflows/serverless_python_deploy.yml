@@ -1,0 +1,92 @@
+name: Serverless Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "What is the environment for this deployment?"
+        required: true
+        type: string
+      region:
+        description: "What AWS Region should be used for this deployment?"
+        required: false
+        type: string
+      release_tag:
+        description: "What Release should be deployed? (enter the name of the tag)"
+        required: true
+        type: string
+      artifact_name:
+        description: "What should the name of the created artifact be?"
+        required: true
+        type: string
+      python_version:
+        description: "What version of python is used for this project?"
+        required: true
+        type: string
+
+    # secrets:
+    #   token:
+    #     # required: true
+
+concurrency: 
+  group: "${{ inputs.environment }}-deploy-serverless"
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs: 
+  check-if-release:
+    runs-on: ubuntu-20.04
+    outputs:
+      prod_ready: steps.get-release.outputs.result.prodReady
+      release: steps.get-release.outputs.result
+    steps:
+      - name: Checkout Github Actions repo
+        uses: actions/checkout@v3
+        with:
+          repository: Genomic-Life/github-actions
+          path: github-actions
+      - name: Get Release Info
+        id: get-release
+        continue-on-error: false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const helper = require('./github-actions/scripts/helper.js');
+            const releaseTagName = process.env.releaseTagName
+            console.log(releaseTagName)
+            var output = null
+            if (releaseTagName == "HEAD") {
+              output = {}
+              output.prodReady = false
+            }
+            else {
+              output = helper.getReleaseFromTagName(github, context, releaseTagName)
+            }
+            return output
+        env:
+          releaseTagName: ${{ inputs.release_tag }}
+
+  test:
+    uses: Genomic-Life/github-actions/.github/workflows/pytest.yml@main
+    with:
+      python_version: ${{inputs.python_version}}
+
+  package:
+    uses: Genomic-Life/github-actions/.github/workflows/serverless_build_artifact.yml@main
+    with:
+      environment: ${{inputs.environment}}
+      region: ${{inputs.region}}
+      release_tag: ${{inputs.release_tag}}
+      artifact_name: ${{inputs.artifact_name}}
+
+  deploy:
+    needs: [package]
+    uses: Genomic-Life/github-actions/.github/workflows/serverless_deploy_artifact.yml@main
+    with:
+      environment: ${{inputs.environment}}
+      region: ${{inputs.region}}
+      release_tag: ${{inputs.release_tag}}
+      artifact_name: ${{inputs.artifact_name}}

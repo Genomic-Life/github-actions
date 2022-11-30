@@ -1,0 +1,76 @@
+name: Serverless Package
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "What is the environment for this deployment?"
+        required: true
+        type: string
+      region:
+        description: "What AWS Region should be used for this deployment?"
+        required: false
+        type: string
+      release_tag:
+        description: "What Release should be deployed? (enter the name of the tag)"
+        required: true
+        type: string
+      artifact_name:
+        description: "What should the name of the created artifact be?"
+        required: true
+        type: string
+
+
+    # secrets:
+    #   token:
+    #     # required: true
+
+concurrency: 
+  group: "${{ inputs.environment }}-package-serverless"
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs:
+  package:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Code From Tag
+        if: ${{ inputs.release_tag != 'HEAD' }}
+        uses: actions/checkout@v3
+        with:
+          ref: release_tag
+      - name: Checkout Code From ${{ github.ref }}
+        if: ${{ inputs.release_tag == 'HEAD' }}
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+      - name: Install Serverless
+        run: |
+          npm install -g serverless
+          npm ci
+      - name: Configure PROD AWS Credentials
+        if: ${{ inputs.environment == 'prod' || inputs.environment == 'stage' }}
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: arn:aws:iam::948264521192:role/github-oidc-provider-Role-18M41E6WZ2630
+          aws-region: ${{ inputs.region }}
+      - name: Configure DEV/TEST AWS Credentials
+        if: ${{ inputs.environment == 'dev' || inputs.environment == 'test' }}
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: arn:aws:iam::284581930156:role/Github-Actions-OIDC-Role-1SFGCE3V2MLNB
+          aws-region: ${{ inputs.region }}
+      - name: Build Serverless Package
+        run: |
+          serverless package --stage ${{ inputs.environment }} --region ${{ inputs.region }}
+      - name: Zip Serverless Package
+        run: |
+          zip -r ${{ inputs.artifact_name }} .
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.artifact_name }} # or path/to/artifact
