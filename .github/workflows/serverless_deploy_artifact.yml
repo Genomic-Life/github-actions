@@ -19,10 +19,6 @@ on:
         description: "What should the name of the created artifact be?"
         required: true
         type: string
-      python_version:
-        description: "What version of python is used for this project?"
-        required: true
-        type: string
 
     # secrets:
     #   token:
