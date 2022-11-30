@@ -83,7 +83,7 @@ jobs:
       artifact_name: ${{inputs.artifact_name}}
 
   deploy:
-    needs: [package]
+    needs: [package, test, check-if-release]
     uses: Genomic-Life/github-actions/.github/workflows/serverless_deploy_artifact.yml@main
     with:
       environment: ${{inputs.environment}}
